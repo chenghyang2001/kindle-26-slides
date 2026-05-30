@@ -1,0 +1,1507 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Vibe Coding CLI 頂級開發 Claude Code — Slides</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f172a;color:#e2e8f0;font-family:system-ui,sans-serif;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+#header{background:#1e293b;padding:10px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #334155;flex-shrink:0}
+#title{font-size:14px;font-weight:600;color:#e2e8f0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#counter{font-size:12px;color:#94a3b8;white-space:nowrap}
+#hint{font-size:11px;color:#64748b;white-space:nowrap}
+#viewer{flex:1;position:relative;overflow:hidden;cursor:grab;background:#0f172a}
+#viewer.dragging{cursor:grabbing}
+#img{position:absolute;transform-origin:0 0;user-select:none;pointer-events:none}
+#badge{position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,.6);color:#94a3b8;font-size:11px;padding:2px 7px;border-radius:4px;pointer-events:none}
+#nav{background:#1e293b;border-top:1px solid #334155;padding:8px 12px;display:flex;align-items:center;justify-content:center;gap:8px;flex-shrink:0}
+#nav button{background:#334155;border:none;color:#e2e8f0;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:13px;transition:background .15s}
+#nav button:hover:not(:disabled){background:#475569}
+#nav button:disabled{opacity:.35;cursor:default}
+#page-info{font-size:13px;color:#94a3b8;min-width:80px;text-align:center}
+#speed-select{background:#334155;border:1px solid #475569;color:#e2e8f0;padding:4px 8px;border-radius:4px;font-size:13px;cursor:pointer}
+#speed-select:focus{outline:none;border-color:#38bdf8}
+#speed-select option:checked{background:#1e3a5f}
+#btn-play{min-width:88px}
+#btn-play.playing{background:#0369a1;color:#fff}
+#thumbs{background:#1e293b;border-top:1px solid #334155;padding:6px 8px;display:flex;gap:6px;overflow-x:auto;flex-shrink:0;max-height:96px}
+#thumbs::-webkit-scrollbar{height:4px}
+#thumbs::-webkit-scrollbar-track{background:#1e293b}
+#thumbs::-webkit-scrollbar-thumb{background:#475569;border-radius:2px}
+.thumb{width:64px;height:48px;object-fit:cover;border-radius:3px;border:2px solid transparent;cursor:pointer;flex-shrink:0;transition:border-color .15s}
+.thumb.active{border-color:#38bdf8}
+.thumb:hover{border-color:#64748b}
+</style>
+</head>
+<body>
+<div id="header">
+  <div id="title">Vibe Coding CLI 頂級開發 Claude Code</div>
+  <div id="counter">1 / 337</div>
+  <div id="hint">← → 換頁 · 滾輪縮放 · 拖曳平移 · 雙擊還原 · Space 播放/暫停</div>
+</div>
+<div id="viewer">
+  <img id="img" src="" alt="">
+  <div id="badge">100%</div>
+</div>
+<div id="nav">
+  <button id="btn-prev">◄</button>
+  <div id="page-info">1 / 337</div>
+  <button id="btn-next">►</button>
+  <select id="speed-select">
+    <option value="5000">5 秒</option>
+    <option value="10000" selected>10 秒</option>
+    <option value="15000">15 秒</option>
+    <option value="20000">20 秒</option>
+    <option value="30000">30 秒</option>
+  </select>
+  <button id="btn-play">▶ 自動播放</button>
+</div>
+<div id="thumbs"></div>
+<script>
+const IMAGES = [
+  {
+    "file": "png/01-第一章｜Claude Code 必備的基礎知識-p001.png",
+    "label": "01-第一章｜Claude Code 必備的基礎知識 (1)"
+  },
+  {
+    "file": "png/01-第一章｜Claude Code 必備的基礎知識-p002.png",
+    "label": "01-第一章｜Claude Code 必備的基礎知識 (2)"
+  },
+  {
+    "file": "png/01-第一章｜Claude Code 必備的基礎知識-p003.png",
+    "label": "01-第一章｜Claude Code 必備的基礎知識 (3)"
+  },
+  {
+    "file": "png/01-第一章｜Claude Code 必備的基礎知識-p004.png",
+    "label": "01-第一章｜Claude Code 必備的基礎知識 (4)"
+  },
+  {
+    "file": "png/01-第一章｜Claude Code 必備的基礎知識-p005.png",
+    "label": "01-第一章｜Claude Code 必備的基礎知識 (5)"
+  },
+  {
+    "file": "png/01-第一章｜Claude Code 必備的基礎知識-p006.png",
+    "label": "01-第一章｜Claude Code 必備的基礎知識 (6)"
+  },
+  {
+    "file": "png/01-第一章｜Claude Code 必備的基礎知識-p007.png",
+    "label": "01-第一章｜Claude Code 必備的基礎知識 (7)"
+  },
+  {
+    "file": "png/01-第一章｜Claude Code 必備的基礎知識-p008.png",
+    "label": "01-第一章｜Claude Code 必備的基礎知識 (8)"
+  },
+  {
+    "file": "png/01-第一章｜Claude Code 必備的基礎知識-p009.png",
+    "label": "01-第一章｜Claude Code 必備的基礎知識 (9)"
+  },
+  {
+    "file": "png/01-第一章｜Claude Code 必備的基礎知識-p010.png",
+    "label": "01-第一章｜Claude Code 必備的基礎知識 (10)"
+  },
+  {
+    "file": "png/01-第一章｜Claude Code 必備的基礎知識-p011.png",
+    "label": "01-第一章｜Claude Code 必備的基礎知識 (11)"
+  },
+  {
+    "file": "png/01-第一章｜Claude Code 必備的基礎知識-p012.png",
+    "label": "01-第一章｜Claude Code 必備的基礎知識 (12)"
+  },
+  {
+    "file": "png/01-第一章｜Claude Code 必備的基礎知識-p013.png",
+    "label": "01-第一章｜Claude Code 必備的基礎知識 (13)"
+  },
+  {
+    "file": "png/02-第二章｜Claude Code 這麼強大的原因-p001.png",
+    "label": "02-第二章｜Claude Code 這麼強大的原因 (1)"
+  },
+  {
+    "file": "png/02-第二章｜Claude Code 這麼強大的原因-p002.png",
+    "label": "02-第二章｜Claude Code 這麼強大的原因 (2)"
+  },
+  {
+    "file": "png/02-第二章｜Claude Code 這麼強大的原因-p003.png",
+    "label": "02-第二章｜Claude Code 這麼強大的原因 (3)"
+  },
+  {
+    "file": "png/02-第二章｜Claude Code 這麼強大的原因-p004.png",
+    "label": "02-第二章｜Claude Code 這麼強大的原因 (4)"
+  },
+  {
+    "file": "png/02-第二章｜Claude Code 這麼強大的原因-p005.png",
+    "label": "02-第二章｜Claude Code 這麼強大的原因 (5)"
+  },
+  {
+    "file": "png/02-第二章｜Claude Code 這麼強大的原因-p006.png",
+    "label": "02-第二章｜Claude Code 這麼強大的原因 (6)"
+  },
+  {
+    "file": "png/02-第二章｜Claude Code 這麼強大的原因-p007.png",
+    "label": "02-第二章｜Claude Code 這麼強大的原因 (7)"
+  },
+  {
+    "file": "png/02-第二章｜Claude Code 這麼強大的原因-p008.png",
+    "label": "02-第二章｜Claude Code 這麼強大的原因 (8)"
+  },
+  {
+    "file": "png/02-第二章｜Claude Code 這麼強大的原因-p009.png",
+    "label": "02-第二章｜Claude Code 這麼強大的原因 (9)"
+  },
+  {
+    "file": "png/02-第二章｜Claude Code 這麼強大的原因-p010.png",
+    "label": "02-第二章｜Claude Code 這麼強大的原因 (10)"
+  },
+  {
+    "file": "png/02-第二章｜Claude Code 這麼強大的原因-p011.png",
+    "label": "02-第二章｜Claude Code 這麼強大的原因 (11)"
+  },
+  {
+    "file": "png/02-第二章｜Claude Code 這麼強大的原因-p012.png",
+    "label": "02-第二章｜Claude Code 這麼強大的原因 (12)"
+  },
+  {
+    "file": "png/02-第二章｜Claude Code 這麼強大的原因-p013.png",
+    "label": "02-第二章｜Claude Code 這麼強大的原因 (13)"
+  },
+  {
+    "file": "png/02-第二章｜Claude Code 這麼強大的原因-p014.png",
+    "label": "02-第二章｜Claude Code 這麼強大的原因 (14)"
+  },
+  {
+    "file": "png/03-第三章｜安裝及基本使用-p001.png",
+    "label": "03-第三章｜安裝及基本使用 (1)"
+  },
+  {
+    "file": "png/03-第三章｜安裝及基本使用-p002.png",
+    "label": "03-第三章｜安裝及基本使用 (2)"
+  },
+  {
+    "file": "png/03-第三章｜安裝及基本使用-p003.png",
+    "label": "03-第三章｜安裝及基本使用 (3)"
+  },
+  {
+    "file": "png/03-第三章｜安裝及基本使用-p004.png",
+    "label": "03-第三章｜安裝及基本使用 (4)"
+  },
+  {
+    "file": "png/03-第三章｜安裝及基本使用-p005.png",
+    "label": "03-第三章｜安裝及基本使用 (5)"
+  },
+  {
+    "file": "png/03-第三章｜安裝及基本使用-p006.png",
+    "label": "03-第三章｜安裝及基本使用 (6)"
+  },
+  {
+    "file": "png/03-第三章｜安裝及基本使用-p007.png",
+    "label": "03-第三章｜安裝及基本使用 (7)"
+  },
+  {
+    "file": "png/03-第三章｜安裝及基本使用-p008.png",
+    "label": "03-第三章｜安裝及基本使用 (8)"
+  },
+  {
+    "file": "png/03-第三章｜安裝及基本使用-p009.png",
+    "label": "03-第三章｜安裝及基本使用 (9)"
+  },
+  {
+    "file": "png/03-第三章｜安裝及基本使用-p010.png",
+    "label": "03-第三章｜安裝及基本使用 (10)"
+  },
+  {
+    "file": "png/03-第三章｜安裝及基本使用-p011.png",
+    "label": "03-第三章｜安裝及基本使用 (11)"
+  },
+  {
+    "file": "png/03-第三章｜安裝及基本使用-p012.png",
+    "label": "03-第三章｜安裝及基本使用 (12)"
+  },
+  {
+    "file": "png/04-第四章｜從現有的專案開始玩起-p001.png",
+    "label": "04-第四章｜從現有的專案開始玩起 (1)"
+  },
+  {
+    "file": "png/04-第四章｜從現有的專案開始玩起-p002.png",
+    "label": "04-第四章｜從現有的專案開始玩起 (2)"
+  },
+  {
+    "file": "png/04-第四章｜從現有的專案開始玩起-p003.png",
+    "label": "04-第四章｜從現有的專案開始玩起 (3)"
+  },
+  {
+    "file": "png/04-第四章｜從現有的專案開始玩起-p004.png",
+    "label": "04-第四章｜從現有的專案開始玩起 (4)"
+  },
+  {
+    "file": "png/04-第四章｜從現有的專案開始玩起-p005.png",
+    "label": "04-第四章｜從現有的專案開始玩起 (5)"
+  },
+  {
+    "file": "png/04-第四章｜從現有的專案開始玩起-p006.png",
+    "label": "04-第四章｜從現有的專案開始玩起 (6)"
+  },
+  {
+    "file": "png/04-第四章｜從現有的專案開始玩起-p007.png",
+    "label": "04-第四章｜從現有的專案開始玩起 (7)"
+  },
+  {
+    "file": "png/04-第四章｜從現有的專案開始玩起-p008.png",
+    "label": "04-第四章｜從現有的專案開始玩起 (8)"
+  },
+  {
+    "file": "png/04-第四章｜從現有的專案開始玩起-p009.png",
+    "label": "04-第四章｜從現有的專案開始玩起 (9)"
+  },
+  {
+    "file": "png/04-第四章｜從現有的專案開始玩起-p010.png",
+    "label": "04-第四章｜從現有的專案開始玩起 (10)"
+  },
+  {
+    "file": "png/04-第四章｜從現有的專案開始玩起-p011.png",
+    "label": "04-第四章｜從現有的專案開始玩起 (11)"
+  },
+  {
+    "file": "png/04-第四章｜從現有的專案開始玩起-p012.png",
+    "label": "04-第四章｜從現有的專案開始玩起 (12)"
+  },
+  {
+    "file": "png/05-第五章｜斜線指令系統-p001.png",
+    "label": "05-第五章｜斜線指令系統 (1)"
+  },
+  {
+    "file": "png/05-第五章｜斜線指令系統-p002.png",
+    "label": "05-第五章｜斜線指令系統 (2)"
+  },
+  {
+    "file": "png/05-第五章｜斜線指令系統-p003.png",
+    "label": "05-第五章｜斜線指令系統 (3)"
+  },
+  {
+    "file": "png/05-第五章｜斜線指令系統-p004.png",
+    "label": "05-第五章｜斜線指令系統 (4)"
+  },
+  {
+    "file": "png/05-第五章｜斜線指令系統-p005.png",
+    "label": "05-第五章｜斜線指令系統 (5)"
+  },
+  {
+    "file": "png/05-第五章｜斜線指令系統-p006.png",
+    "label": "05-第五章｜斜線指令系統 (6)"
+  },
+  {
+    "file": "png/05-第五章｜斜線指令系統-p007.png",
+    "label": "05-第五章｜斜線指令系統 (7)"
+  },
+  {
+    "file": "png/05-第五章｜斜線指令系統-p008.png",
+    "label": "05-第五章｜斜線指令系統 (8)"
+  },
+  {
+    "file": "png/05-第五章｜斜線指令系統-p009.png",
+    "label": "05-第五章｜斜線指令系統 (9)"
+  },
+  {
+    "file": "png/05-第五章｜斜線指令系統-p010.png",
+    "label": "05-第五章｜斜線指令系統 (10)"
+  },
+  {
+    "file": "png/05-第五章｜斜線指令系統-p011.png",
+    "label": "05-第五章｜斜線指令系統 (11)"
+  },
+  {
+    "file": "png/05-第五章｜斜線指令系統-p012.png",
+    "label": "05-第五章｜斜線指令系統 (12)"
+  },
+  {
+    "file": "png/06-第六章｜CLI 深度應用與自動化-p001.png",
+    "label": "06-第六章｜CLI 深度應用與自動化 (1)"
+  },
+  {
+    "file": "png/06-第六章｜CLI 深度應用與自動化-p002.png",
+    "label": "06-第六章｜CLI 深度應用與自動化 (2)"
+  },
+  {
+    "file": "png/06-第六章｜CLI 深度應用與自動化-p003.png",
+    "label": "06-第六章｜CLI 深度應用與自動化 (3)"
+  },
+  {
+    "file": "png/06-第六章｜CLI 深度應用與自動化-p004.png",
+    "label": "06-第六章｜CLI 深度應用與自動化 (4)"
+  },
+  {
+    "file": "png/06-第六章｜CLI 深度應用與自動化-p005.png",
+    "label": "06-第六章｜CLI 深度應用與自動化 (5)"
+  },
+  {
+    "file": "png/06-第六章｜CLI 深度應用與自動化-p006.png",
+    "label": "06-第六章｜CLI 深度應用與自動化 (6)"
+  },
+  {
+    "file": "png/06-第六章｜CLI 深度應用與自動化-p007.png",
+    "label": "06-第六章｜CLI 深度應用與自動化 (7)"
+  },
+  {
+    "file": "png/06-第六章｜CLI 深度應用與自動化-p008.png",
+    "label": "06-第六章｜CLI 深度應用與自動化 (8)"
+  },
+  {
+    "file": "png/06-第六章｜CLI 深度應用與自動化-p009.png",
+    "label": "06-第六章｜CLI 深度應用與自動化 (9)"
+  },
+  {
+    "file": "png/06-第六章｜CLI 深度應用與自動化-p010.png",
+    "label": "06-第六章｜CLI 深度應用與自動化 (10)"
+  },
+  {
+    "file": "png/06-第六章｜CLI 深度應用與自動化-p011.png",
+    "label": "06-第六章｜CLI 深度應用與自動化 (11)"
+  },
+  {
+    "file": "png/06-第六章｜CLI 深度應用與自動化-p012.png",
+    "label": "06-第六章｜CLI 深度應用與自動化 (12)"
+  },
+  {
+    "file": "png/06-第六章｜CLI 深度應用與自動化-p013.png",
+    "label": "06-第六章｜CLI 深度應用與自動化 (13)"
+  },
+  {
+    "file": "png/06-第六章｜CLI 深度應用與自動化-p014.png",
+    "label": "06-第六章｜CLI 深度應用與自動化 (14)"
+  },
+  {
+    "file": "png/06-第六章｜CLI 深度應用與自動化-p015.png",
+    "label": "06-第六章｜CLI 深度應用與自動化 (15)"
+  },
+  {
+    "file": "png/06-第六章｜CLI 深度應用與自動化-p016.png",
+    "label": "06-第六章｜CLI 深度應用與自動化 (16)"
+  },
+  {
+    "file": "png/06-第六章｜CLI 深度應用與自動化-p017.png",
+    "label": "06-第六章｜CLI 深度應用與自動化 (17)"
+  },
+  {
+    "file": "png/06-第六章｜CLI 深度應用與自動化-p018.png",
+    "label": "06-第六章｜CLI 深度應用與自動化 (18)"
+  },
+  {
+    "file": "png/07-第七章｜CLAUDE.md 與記憶體管理-p001.png",
+    "label": "07-第七章｜CLAUDE.md 與記憶體管理 (1)"
+  },
+  {
+    "file": "png/07-第七章｜CLAUDE.md 與記憶體管理-p002.png",
+    "label": "07-第七章｜CLAUDE.md 與記憶體管理 (2)"
+  },
+  {
+    "file": "png/07-第七章｜CLAUDE.md 與記憶體管理-p003.png",
+    "label": "07-第七章｜CLAUDE.md 與記憶體管理 (3)"
+  },
+  {
+    "file": "png/07-第七章｜CLAUDE.md 與記憶體管理-p004.png",
+    "label": "07-第七章｜CLAUDE.md 與記憶體管理 (4)"
+  },
+  {
+    "file": "png/07-第七章｜CLAUDE.md 與記憶體管理-p005.png",
+    "label": "07-第七章｜CLAUDE.md 與記憶體管理 (5)"
+  },
+  {
+    "file": "png/07-第七章｜CLAUDE.md 與記憶體管理-p006.png",
+    "label": "07-第七章｜CLAUDE.md 與記憶體管理 (6)"
+  },
+  {
+    "file": "png/07-第七章｜CLAUDE.md 與記憶體管理-p007.png",
+    "label": "07-第七章｜CLAUDE.md 與記憶體管理 (7)"
+  },
+  {
+    "file": "png/07-第七章｜CLAUDE.md 與記憶體管理-p008.png",
+    "label": "07-第七章｜CLAUDE.md 與記憶體管理 (8)"
+  },
+  {
+    "file": "png/07-第七章｜CLAUDE.md 與記憶體管理-p009.png",
+    "label": "07-第七章｜CLAUDE.md 與記憶體管理 (9)"
+  },
+  {
+    "file": "png/07-第七章｜CLAUDE.md 與記憶體管理-p010.png",
+    "label": "07-第七章｜CLAUDE.md 與記憶體管理 (10)"
+  },
+  {
+    "file": "png/07-第七章｜CLAUDE.md 與記憶體管理-p011.png",
+    "label": "07-第七章｜CLAUDE.md 與記憶體管理 (11)"
+  },
+  {
+    "file": "png/08-第八章｜可能取代 MCP 的 Agent Skills-p001.png",
+    "label": "08-第八章｜可能取代 MCP 的 Agent Skills (1)"
+  },
+  {
+    "file": "png/08-第八章｜可能取代 MCP 的 Agent Skills-p002.png",
+    "label": "08-第八章｜可能取代 MCP 的 Agent Skills (2)"
+  },
+  {
+    "file": "png/08-第八章｜可能取代 MCP 的 Agent Skills-p003.png",
+    "label": "08-第八章｜可能取代 MCP 的 Agent Skills (3)"
+  },
+  {
+    "file": "png/08-第八章｜可能取代 MCP 的 Agent Skills-p004.png",
+    "label": "08-第八章｜可能取代 MCP 的 Agent Skills (4)"
+  },
+  {
+    "file": "png/08-第八章｜可能取代 MCP 的 Agent Skills-p005.png",
+    "label": "08-第八章｜可能取代 MCP 的 Agent Skills (5)"
+  },
+  {
+    "file": "png/08-第八章｜可能取代 MCP 的 Agent Skills-p006.png",
+    "label": "08-第八章｜可能取代 MCP 的 Agent Skills (6)"
+  },
+  {
+    "file": "png/08-第八章｜可能取代 MCP 的 Agent Skills-p007.png",
+    "label": "08-第八章｜可能取代 MCP 的 Agent Skills (7)"
+  },
+  {
+    "file": "png/08-第八章｜可能取代 MCP 的 Agent Skills-p008.png",
+    "label": "08-第八章｜可能取代 MCP 的 Agent Skills (8)"
+  },
+  {
+    "file": "png/09-第九章｜深度客製化 Claude Code 設定檔-p001.png",
+    "label": "09-第九章｜深度客製化 Claude Code 設定檔 (1)"
+  },
+  {
+    "file": "png/09-第九章｜深度客製化 Claude Code 設定檔-p002.png",
+    "label": "09-第九章｜深度客製化 Claude Code 設定檔 (2)"
+  },
+  {
+    "file": "png/09-第九章｜深度客製化 Claude Code 設定檔-p003.png",
+    "label": "09-第九章｜深度客製化 Claude Code 設定檔 (3)"
+  },
+  {
+    "file": "png/09-第九章｜深度客製化 Claude Code 設定檔-p004.png",
+    "label": "09-第九章｜深度客製化 Claude Code 設定檔 (4)"
+  },
+  {
+    "file": "png/09-第九章｜深度客製化 Claude Code 設定檔-p005.png",
+    "label": "09-第九章｜深度客製化 Claude Code 設定檔 (5)"
+  },
+  {
+    "file": "png/09-第九章｜深度客製化 Claude Code 設定檔-p006.png",
+    "label": "09-第九章｜深度客製化 Claude Code 設定檔 (6)"
+  },
+  {
+    "file": "png/09-第九章｜深度客製化 Claude Code 設定檔-p007.png",
+    "label": "09-第九章｜深度客製化 Claude Code 設定檔 (7)"
+  },
+  {
+    "file": "png/09-第九章｜深度客製化 Claude Code 設定檔-p008.png",
+    "label": "09-第九章｜深度客製化 Claude Code 設定檔 (8)"
+  },
+  {
+    "file": "png/09-第九章｜深度客製化 Claude Code 設定檔-p009.png",
+    "label": "09-第九章｜深度客製化 Claude Code 設定檔 (9)"
+  },
+  {
+    "file": "png/09-第九章｜深度客製化 Claude Code 設定檔-p010.png",
+    "label": "09-第九章｜深度客製化 Claude Code 設定檔 (10)"
+  },
+  {
+    "file": "png/09-第九章｜深度客製化 Claude Code 設定檔-p011.png",
+    "label": "09-第九章｜深度客製化 Claude Code 設定檔 (11)"
+  },
+  {
+    "file": "png/09-第九章｜深度客製化 Claude Code 設定檔-p012.png",
+    "label": "09-第九章｜深度客製化 Claude Code 設定檔 (12)"
+  },
+  {
+    "file": "png/09-第九章｜深度客製化 Claude Code 設定檔-p013.png",
+    "label": "09-第九章｜深度客製化 Claude Code 設定檔 (13)"
+  },
+  {
+    "file": "png/09-第九章｜深度客製化 Claude Code 設定檔-p014.png",
+    "label": "09-第九章｜深度客製化 Claude Code 設定檔 (14)"
+  },
+  {
+    "file": "png/09-第九章｜深度客製化 Claude Code 設定檔-p015.png",
+    "label": "09-第九章｜深度客製化 Claude Code 設定檔 (15)"
+  },
+  {
+    "file": "png/09-第九章｜深度客製化 Claude Code 設定檔-p016.png",
+    "label": "09-第九章｜深度客製化 Claude Code 設定檔 (16)"
+  },
+  {
+    "file": "png/09-第九章｜深度客製化 Claude Code 設定檔-p017.png",
+    "label": "09-第九章｜深度客製化 Claude Code 設定檔 (17)"
+  },
+  {
+    "file": "png/10-第十章｜Hooks 自動化機制與進階應用-p001.png",
+    "label": "10-第十章｜Hooks 自動化機制與進階應用 (1)"
+  },
+  {
+    "file": "png/10-第十章｜Hooks 自動化機制與進階應用-p002.png",
+    "label": "10-第十章｜Hooks 自動化機制與進階應用 (2)"
+  },
+  {
+    "file": "png/10-第十章｜Hooks 自動化機制與進階應用-p003.png",
+    "label": "10-第十章｜Hooks 自動化機制與進階應用 (3)"
+  },
+  {
+    "file": "png/10-第十章｜Hooks 自動化機制與進階應用-p004.png",
+    "label": "10-第十章｜Hooks 自動化機制與進階應用 (4)"
+  },
+  {
+    "file": "png/10-第十章｜Hooks 自動化機制與進階應用-p005.png",
+    "label": "10-第十章｜Hooks 自動化機制與進階應用 (5)"
+  },
+  {
+    "file": "png/10-第十章｜Hooks 自動化機制與進階應用-p006.png",
+    "label": "10-第十章｜Hooks 自動化機制與進階應用 (6)"
+  },
+  {
+    "file": "png/10-第十章｜Hooks 自動化機制與進階應用-p007.png",
+    "label": "10-第十章｜Hooks 自動化機制與進階應用 (7)"
+  },
+  {
+    "file": "png/10-第十章｜Hooks 自動化機制與進階應用-p008.png",
+    "label": "10-第十章｜Hooks 自動化機制與進階應用 (8)"
+  },
+  {
+    "file": "png/10-第十章｜Hooks 自動化機制與進階應用-p009.png",
+    "label": "10-第十章｜Hooks 自動化機制與進階應用 (9)"
+  },
+  {
+    "file": "png/10-第十章｜Hooks 自動化機制與進階應用-p010.png",
+    "label": "10-第十章｜Hooks 自動化機制與進階應用 (10)"
+  },
+  {
+    "file": "png/10-第十章｜Hooks 自動化機制與進階應用-p011.png",
+    "label": "10-第十章｜Hooks 自動化機制與進階應用 (11)"
+  },
+  {
+    "file": "png/10-第十章｜Hooks 自動化機制與進階應用-p012.png",
+    "label": "10-第十章｜Hooks 自動化機制與進階應用 (12)"
+  },
+  {
+    "file": "png/10-第十章｜Hooks 自動化機制與進階應用-p013.png",
+    "label": "10-第十章｜Hooks 自動化機制與進階應用 (13)"
+  },
+  {
+    "file": "png/10-第十章｜Hooks 自動化機制與進階應用-p014.png",
+    "label": "10-第十章｜Hooks 自動化機制與進階應用 (14)"
+  },
+  {
+    "file": "png/11-第十一章｜Plugins 外掛系統-p001.png",
+    "label": "11-第十一章｜Plugins 外掛系統 (1)"
+  },
+  {
+    "file": "png/11-第十一章｜Plugins 外掛系統-p002.png",
+    "label": "11-第十一章｜Plugins 外掛系統 (2)"
+  },
+  {
+    "file": "png/11-第十一章｜Plugins 外掛系統-p003.png",
+    "label": "11-第十一章｜Plugins 外掛系統 (3)"
+  },
+  {
+    "file": "png/11-第十一章｜Plugins 外掛系統-p004.png",
+    "label": "11-第十一章｜Plugins 外掛系統 (4)"
+  },
+  {
+    "file": "png/11-第十一章｜Plugins 外掛系統-p005.png",
+    "label": "11-第十一章｜Plugins 外掛系統 (5)"
+  },
+  {
+    "file": "png/11-第十一章｜Plugins 外掛系統-p006.png",
+    "label": "11-第十一章｜Plugins 外掛系統 (6)"
+  },
+  {
+    "file": "png/11-第十一章｜Plugins 外掛系統-p007.png",
+    "label": "11-第十一章｜Plugins 外掛系統 (7)"
+  },
+  {
+    "file": "png/11-第十一章｜Plugins 外掛系統-p008.png",
+    "label": "11-第十一章｜Plugins 外掛系統 (8)"
+  },
+  {
+    "file": "png/11-第十一章｜Plugins 外掛系統-p009.png",
+    "label": "11-第十一章｜Plugins 外掛系統 (9)"
+  },
+  {
+    "file": "png/11-第十一章｜Plugins 外掛系統-p010.png",
+    "label": "11-第十一章｜Plugins 外掛系統 (10)"
+  },
+  {
+    "file": "png/11-第十一章｜Plugins 外掛系統-p011.png",
+    "label": "11-第十一章｜Plugins 外掛系統 (11)"
+  },
+  {
+    "file": "png/11-第十一章｜Plugins 外掛系統-p012.png",
+    "label": "11-第十一章｜Plugins 外掛系統 (12)"
+  },
+  {
+    "file": "png/11-第十一章｜Plugins 外掛系統-p013.png",
+    "label": "11-第十一章｜Plugins 外掛系統 (13)"
+  },
+  {
+    "file": "png/12-第十二章｜MCP Server 讓 Claude Code 成為變形金鋼-p001.png",
+    "label": "12-第十二章｜MCP Server 讓 Claude Code 成為變形金鋼 (1)"
+  },
+  {
+    "file": "png/12-第十二章｜MCP Server 讓 Claude Code 成為變形金鋼-p002.png",
+    "label": "12-第十二章｜MCP Server 讓 Claude Code 成為變形金鋼 (2)"
+  },
+  {
+    "file": "png/12-第十二章｜MCP Server 讓 Claude Code 成為變形金鋼-p003.png",
+    "label": "12-第十二章｜MCP Server 讓 Claude Code 成為變形金鋼 (3)"
+  },
+  {
+    "file": "png/12-第十二章｜MCP Server 讓 Claude Code 成為變形金鋼-p004.png",
+    "label": "12-第十二章｜MCP Server 讓 Claude Code 成為變形金鋼 (4)"
+  },
+  {
+    "file": "png/12-第十二章｜MCP Server 讓 Claude Code 成為變形金鋼-p005.png",
+    "label": "12-第十二章｜MCP Server 讓 Claude Code 成為變形金鋼 (5)"
+  },
+  {
+    "file": "png/12-第十二章｜MCP Server 讓 Claude Code 成為變形金鋼-p006.png",
+    "label": "12-第十二章｜MCP Server 讓 Claude Code 成為變形金鋼 (6)"
+  },
+  {
+    "file": "png/12-第十二章｜MCP Server 讓 Claude Code 成為變形金鋼-p007.png",
+    "label": "12-第十二章｜MCP Server 讓 Claude Code 成為變形金鋼 (7)"
+  },
+  {
+    "file": "png/12-第十二章｜MCP Server 讓 Claude Code 成為變形金鋼-p008.png",
+    "label": "12-第十二章｜MCP Server 讓 Claude Code 成為變形金鋼 (8)"
+  },
+  {
+    "file": "png/12-第十二章｜MCP Server 讓 Claude Code 成為變形金鋼-p009.png",
+    "label": "12-第十二章｜MCP Server 讓 Claude Code 成為變形金鋼 (9)"
+  },
+  {
+    "file": "png/12-第十二章｜MCP Server 讓 Claude Code 成為變形金鋼-p010.png",
+    "label": "12-第十二章｜MCP Server 讓 Claude Code 成為變形金鋼 (10)"
+  },
+  {
+    "file": "png/12-第十二章｜MCP Server 讓 Claude Code 成為變形金鋼-p011.png",
+    "label": "12-第十二章｜MCP Server 讓 Claude Code 成為變形金鋼 (11)"
+  },
+  {
+    "file": "png/12-第十二章｜MCP Server 讓 Claude Code 成為變形金鋼-p012.png",
+    "label": "12-第十二章｜MCP Server 讓 Claude Code 成為變形金鋼 (12)"
+  },
+  {
+    "file": "png/12-第十二章｜MCP Server 讓 Claude Code 成為變形金鋼-p013.png",
+    "label": "12-第十二章｜MCP Server 讓 Claude Code 成為變形金鋼 (13)"
+  },
+  {
+    "file": "png/13-第十三章｜MCP Server 大閱兵-p001.png",
+    "label": "13-第十三章｜MCP Server 大閱兵 (1)"
+  },
+  {
+    "file": "png/13-第十三章｜MCP Server 大閱兵-p002.png",
+    "label": "13-第十三章｜MCP Server 大閱兵 (2)"
+  },
+  {
+    "file": "png/13-第十三章｜MCP Server 大閱兵-p003.png",
+    "label": "13-第十三章｜MCP Server 大閱兵 (3)"
+  },
+  {
+    "file": "png/13-第十三章｜MCP Server 大閱兵-p004.png",
+    "label": "13-第十三章｜MCP Server 大閱兵 (4)"
+  },
+  {
+    "file": "png/13-第十三章｜MCP Server 大閱兵-p005.png",
+    "label": "13-第十三章｜MCP Server 大閱兵 (5)"
+  },
+  {
+    "file": "png/13-第十三章｜MCP Server 大閱兵-p006.png",
+    "label": "13-第十三章｜MCP Server 大閱兵 (6)"
+  },
+  {
+    "file": "png/13-第十三章｜MCP Server 大閱兵-p007.png",
+    "label": "13-第十三章｜MCP Server 大閱兵 (7)"
+  },
+  {
+    "file": "png/13-第十三章｜MCP Server 大閱兵-p008.png",
+    "label": "13-第十三章｜MCP Server 大閱兵 (8)"
+  },
+  {
+    "file": "png/13-第十三章｜MCP Server 大閱兵-p009.png",
+    "label": "13-第十三章｜MCP Server 大閱兵 (9)"
+  },
+  {
+    "file": "png/13-第十三章｜MCP Server 大閱兵-p010.png",
+    "label": "13-第十三章｜MCP Server 大閱兵 (10)"
+  },
+  {
+    "file": "png/14-第十四章｜Subagent 子代理協作系統-p001.png",
+    "label": "14-第十四章｜Subagent 子代理協作系統 (1)"
+  },
+  {
+    "file": "png/14-第十四章｜Subagent 子代理協作系統-p002.png",
+    "label": "14-第十四章｜Subagent 子代理協作系統 (2)"
+  },
+  {
+    "file": "png/14-第十四章｜Subagent 子代理協作系統-p003.png",
+    "label": "14-第十四章｜Subagent 子代理協作系統 (3)"
+  },
+  {
+    "file": "png/14-第十四章｜Subagent 子代理協作系統-p004.png",
+    "label": "14-第十四章｜Subagent 子代理協作系統 (4)"
+  },
+  {
+    "file": "png/14-第十四章｜Subagent 子代理協作系統-p005.png",
+    "label": "14-第十四章｜Subagent 子代理協作系統 (5)"
+  },
+  {
+    "file": "png/14-第十四章｜Subagent 子代理協作系統-p006.png",
+    "label": "14-第十四章｜Subagent 子代理協作系統 (6)"
+  },
+  {
+    "file": "png/14-第十四章｜Subagent 子代理協作系統-p007.png",
+    "label": "14-第十四章｜Subagent 子代理協作系統 (7)"
+  },
+  {
+    "file": "png/14-第十四章｜Subagent 子代理協作系統-p008.png",
+    "label": "14-第十四章｜Subagent 子代理協作系統 (8)"
+  },
+  {
+    "file": "png/14-第十四章｜Subagent 子代理協作系統-p009.png",
+    "label": "14-第十四章｜Subagent 子代理協作系統 (9)"
+  },
+  {
+    "file": "png/14-第十四章｜Subagent 子代理協作系統-p010.png",
+    "label": "14-第十四章｜Subagent 子代理協作系統 (10)"
+  },
+  {
+    "file": "png/14-第十四章｜Subagent 子代理協作系統-p011.png",
+    "label": "14-第十四章｜Subagent 子代理協作系統 (11)"
+  },
+  {
+    "file": "png/14-第十四章｜Subagent 子代理協作系統-p012.png",
+    "label": "14-第十四章｜Subagent 子代理協作系統 (12)"
+  },
+  {
+    "file": "png/14-第十四章｜Subagent 子代理協作系統-p013.png",
+    "label": "14-第十四章｜Subagent 子代理協作系統 (13)"
+  },
+  {
+    "file": "png/14-第十四章｜Subagent 子代理協作系統-p014.png",
+    "label": "14-第十四章｜Subagent 子代理協作系統 (14)"
+  },
+  {
+    "file": "png/14-第十四章｜Subagent 子代理協作系統-p015.png",
+    "label": "14-第十四章｜Subagent 子代理協作系統 (15)"
+  },
+  {
+    "file": "png/14-第十四章｜Subagent 子代理協作系統-p016.png",
+    "label": "14-第十四章｜Subagent 子代理協作系統 (16)"
+  },
+  {
+    "file": "png/14-第十四章｜Subagent 子代理協作系統-p017.png",
+    "label": "14-第十四章｜Subagent 子代理協作系統 (17)"
+  },
+  {
+    "file": "png/14-第十四章｜Subagent 子代理協作系統-p018.png",
+    "label": "14-第十四章｜Subagent 子代理協作系統 (18)"
+  },
+  {
+    "file": "png/14-第十四章｜Subagent 子代理協作系統-p019.png",
+    "label": "14-第十四章｜Subagent 子代理協作系統 (19)"
+  },
+  {
+    "file": "png/14-第十四章｜Subagent 子代理協作系統-p020.png",
+    "label": "14-第十四章｜Subagent 子代理協作系統 (20)"
+  },
+  {
+    "file": "png/14-第十四章｜Subagent 子代理協作系統-p021.png",
+    "label": "14-第十四章｜Subagent 子代理協作系統 (21)"
+  },
+  {
+    "file": "png/15-第十五章｜輸出樣式 Output Style-p001.png",
+    "label": "15-第十五章｜輸出樣式 Output Style (1)"
+  },
+  {
+    "file": "png/15-第十五章｜輸出樣式 Output Style-p002.png",
+    "label": "15-第十五章｜輸出樣式 Output Style (2)"
+  },
+  {
+    "file": "png/15-第十五章｜輸出樣式 Output Style-p003.png",
+    "label": "15-第十五章｜輸出樣式 Output Style (3)"
+  },
+  {
+    "file": "png/15-第十五章｜輸出樣式 Output Style-p004.png",
+    "label": "15-第十五章｜輸出樣式 Output Style (4)"
+  },
+  {
+    "file": "png/15-第十五章｜輸出樣式 Output Style-p005.png",
+    "label": "15-第十五章｜輸出樣式 Output Style (5)"
+  },
+  {
+    "file": "png/15-第十五章｜輸出樣式 Output Style-p006.png",
+    "label": "15-第十五章｜輸出樣式 Output Style (6)"
+  },
+  {
+    "file": "png/15-第十五章｜輸出樣式 Output Style-p007.png",
+    "label": "15-第十五章｜輸出樣式 Output Style (7)"
+  },
+  {
+    "file": "png/15-第十五章｜輸出樣式 Output Style-p008.png",
+    "label": "15-第十五章｜輸出樣式 Output Style (8)"
+  },
+  {
+    "file": "png/15-第十五章｜輸出樣式 Output Style-p009.png",
+    "label": "15-第十五章｜輸出樣式 Output Style (9)"
+  },
+  {
+    "file": "png/15-第十五章｜輸出樣式 Output Style-p010.png",
+    "label": "15-第十五章｜輸出樣式 Output Style (10)"
+  },
+  {
+    "file": "png/15-第十五章｜輸出樣式 Output Style-p011.png",
+    "label": "15-第十五章｜輸出樣式 Output Style (11)"
+  },
+  {
+    "file": "png/16-第十六章｜GitHub Actions 與 CI_CD 整合-p001.png",
+    "label": "16-第十六章｜GitHub Actions 與 CI_CD 整合 (1)"
+  },
+  {
+    "file": "png/16-第十六章｜GitHub Actions 與 CI_CD 整合-p002.png",
+    "label": "16-第十六章｜GitHub Actions 與 CI_CD 整合 (2)"
+  },
+  {
+    "file": "png/16-第十六章｜GitHub Actions 與 CI_CD 整合-p003.png",
+    "label": "16-第十六章｜GitHub Actions 與 CI_CD 整合 (3)"
+  },
+  {
+    "file": "png/16-第十六章｜GitHub Actions 與 CI_CD 整合-p004.png",
+    "label": "16-第十六章｜GitHub Actions 與 CI_CD 整合 (4)"
+  },
+  {
+    "file": "png/16-第十六章｜GitHub Actions 與 CI_CD 整合-p005.png",
+    "label": "16-第十六章｜GitHub Actions 與 CI_CD 整合 (5)"
+  },
+  {
+    "file": "png/16-第十六章｜GitHub Actions 與 CI_CD 整合-p006.png",
+    "label": "16-第十六章｜GitHub Actions 與 CI_CD 整合 (6)"
+  },
+  {
+    "file": "png/16-第十六章｜GitHub Actions 與 CI_CD 整合-p007.png",
+    "label": "16-第十六章｜GitHub Actions 與 CI_CD 整合 (7)"
+  },
+  {
+    "file": "png/16-第十六章｜GitHub Actions 與 CI_CD 整合-p008.png",
+    "label": "16-第十六章｜GitHub Actions 與 CI_CD 整合 (8)"
+  },
+  {
+    "file": "png/16-第十六章｜GitHub Actions 與 CI_CD 整合-p009.png",
+    "label": "16-第十六章｜GitHub Actions 與 CI_CD 整合 (9)"
+  },
+  {
+    "file": "png/16-第十六章｜GitHub Actions 與 CI_CD 整合-p010.png",
+    "label": "16-第十六章｜GitHub Actions 與 CI_CD 整合 (10)"
+  },
+  {
+    "file": "png/16-第十六章｜GitHub Actions 與 CI_CD 整合-p011.png",
+    "label": "16-第十六章｜GitHub Actions 與 CI_CD 整合 (11)"
+  },
+  {
+    "file": "png/17-第十七章｜將 Claude Code 接上自訂的模型-p001.png",
+    "label": "17-第十七章｜將 Claude Code 接上自訂的模型 (1)"
+  },
+  {
+    "file": "png/17-第十七章｜將 Claude Code 接上自訂的模型-p002.png",
+    "label": "17-第十七章｜將 Claude Code 接上自訂的模型 (2)"
+  },
+  {
+    "file": "png/17-第十七章｜將 Claude Code 接上自訂的模型-p003.png",
+    "label": "17-第十七章｜將 Claude Code 接上自訂的模型 (3)"
+  },
+  {
+    "file": "png/17-第十七章｜將 Claude Code 接上自訂的模型-p004.png",
+    "label": "17-第十七章｜將 Claude Code 接上自訂的模型 (4)"
+  },
+  {
+    "file": "png/17-第十七章｜將 Claude Code 接上自訂的模型-p005.png",
+    "label": "17-第十七章｜將 Claude Code 接上自訂的模型 (5)"
+  },
+  {
+    "file": "png/17-第十七章｜將 Claude Code 接上自訂的模型-p006.png",
+    "label": "17-第十七章｜將 Claude Code 接上自訂的模型 (6)"
+  },
+  {
+    "file": "png/17-第十七章｜將 Claude Code 接上自訂的模型-p007.png",
+    "label": "17-第十七章｜將 Claude Code 接上自訂的模型 (7)"
+  },
+  {
+    "file": "png/17-第十七章｜將 Claude Code 接上自訂的模型-p008.png",
+    "label": "17-第十七章｜將 Claude Code 接上自訂的模型 (8)"
+  },
+  {
+    "file": "png/17-第十七章｜將 Claude Code 接上自訂的模型-p009.png",
+    "label": "17-第十七章｜將 Claude Code 接上自訂的模型 (9)"
+  },
+  {
+    "file": "png/17-第十七章｜將 Claude Code 接上自訂的模型-p010.png",
+    "label": "17-第十七章｜將 Claude Code 接上自訂的模型 (10)"
+  },
+  {
+    "file": "png/17-第十七章｜將 Claude Code 接上自訂的模型-p011.png",
+    "label": "17-第十七章｜將 Claude Code 接上自訂的模型 (11)"
+  },
+  {
+    "file": "png/17-第十七章｜將 Claude Code 接上自訂的模型-p012.png",
+    "label": "17-第十七章｜將 Claude Code 接上自訂的模型 (12)"
+  },
+  {
+    "file": "png/17-第十七章｜將 Claude Code 接上自訂的模型-p013.png",
+    "label": "17-第十七章｜將 Claude Code 接上自訂的模型 (13)"
+  },
+  {
+    "file": "png/17-第十七章｜將 Claude Code 接上自訂的模型-p014.png",
+    "label": "17-第十七章｜將 Claude Code 接上自訂的模型 (14)"
+  },
+  {
+    "file": "png/18-第十八章｜Claude Code 網頁版-p001.png",
+    "label": "18-第十八章｜Claude Code 網頁版 (1)"
+  },
+  {
+    "file": "png/18-第十八章｜Claude Code 網頁版-p002.png",
+    "label": "18-第十八章｜Claude Code 網頁版 (2)"
+  },
+  {
+    "file": "png/18-第十八章｜Claude Code 網頁版-p003.png",
+    "label": "18-第十八章｜Claude Code 網頁版 (3)"
+  },
+  {
+    "file": "png/18-第十八章｜Claude Code 網頁版-p004.png",
+    "label": "18-第十八章｜Claude Code 網頁版 (4)"
+  },
+  {
+    "file": "png/18-第十八章｜Claude Code 網頁版-p005.png",
+    "label": "18-第十八章｜Claude Code 網頁版 (5)"
+  },
+  {
+    "file": "png/18-第十八章｜Claude Code 網頁版-p006.png",
+    "label": "18-第十八章｜Claude Code 網頁版 (6)"
+  },
+  {
+    "file": "png/18-第十八章｜Claude Code 網頁版-p007.png",
+    "label": "18-第十八章｜Claude Code 網頁版 (7)"
+  },
+  {
+    "file": "png/18-第十八章｜Claude Code 網頁版-p008.png",
+    "label": "18-第十八章｜Claude Code 網頁版 (8)"
+  },
+  {
+    "file": "png/18-第十八章｜Claude Code 網頁版-p009.png",
+    "label": "18-第十八章｜Claude Code 網頁版 (9)"
+  },
+  {
+    "file": "png/19-第十九章｜Spec Kit 規格驅動開發-p001.png",
+    "label": "19-第十九章｜Spec Kit 規格驅動開發 (1)"
+  },
+  {
+    "file": "png/19-第十九章｜Spec Kit 規格驅動開發-p002.png",
+    "label": "19-第十九章｜Spec Kit 規格驅動開發 (2)"
+  },
+  {
+    "file": "png/19-第十九章｜Spec Kit 規格驅動開發-p003.png",
+    "label": "19-第十九章｜Spec Kit 規格驅動開發 (3)"
+  },
+  {
+    "file": "png/19-第十九章｜Spec Kit 規格驅動開發-p004.png",
+    "label": "19-第十九章｜Spec Kit 規格驅動開發 (4)"
+  },
+  {
+    "file": "png/19-第十九章｜Spec Kit 規格驅動開發-p005.png",
+    "label": "19-第十九章｜Spec Kit 規格驅動開發 (5)"
+  },
+  {
+    "file": "png/19-第十九章｜Spec Kit 規格驅動開發-p006.png",
+    "label": "19-第十九章｜Spec Kit 規格驅動開發 (6)"
+  },
+  {
+    "file": "png/19-第十九章｜Spec Kit 規格驅動開發-p007.png",
+    "label": "19-第十九章｜Spec Kit 規格驅動開發 (7)"
+  },
+  {
+    "file": "png/19-第十九章｜Spec Kit 規格驅動開發-p008.png",
+    "label": "19-第十九章｜Spec Kit 規格驅動開發 (8)"
+  },
+  {
+    "file": "png/19-第十九章｜Spec Kit 規格驅動開發-p009.png",
+    "label": "19-第十九章｜Spec Kit 規格驅動開發 (9)"
+  },
+  {
+    "file": "png/19-第十九章｜Spec Kit 規格驅動開發-p010.png",
+    "label": "19-第十九章｜Spec Kit 規格驅動開發 (10)"
+  },
+  {
+    "file": "png/19-第十九章｜Spec Kit 規格驅動開發-p011.png",
+    "label": "19-第十九章｜Spec Kit 規格驅動開發 (11)"
+  },
+  {
+    "file": "png/19-第十九章｜Spec Kit 規格驅動開發-p012.png",
+    "label": "19-第十九章｜Spec Kit 規格驅動開發 (12)"
+  },
+  {
+    "file": "png/19-第十九章｜Spec Kit 規格驅動開發-p013.png",
+    "label": "19-第十九章｜Spec Kit 規格驅動開發 (13)"
+  },
+  {
+    "file": "png/19-第十九章｜Spec Kit 規格驅動開發-p014.png",
+    "label": "19-第十九章｜Spec Kit 規格驅動開發 (14)"
+  },
+  {
+    "file": "png/19-第十九章｜Spec Kit 規格驅動開發-p015.png",
+    "label": "19-第十九章｜Spec Kit 規格驅動開發 (15)"
+  },
+  {
+    "file": "png/20-第二十章｜更了解你的 Claude Code-p001.png",
+    "label": "20-第二十章｜更了解你的 Claude Code (1)"
+  },
+  {
+    "file": "png/20-第二十章｜更了解你的 Claude Code-p002.png",
+    "label": "20-第二十章｜更了解你的 Claude Code (2)"
+  },
+  {
+    "file": "png/20-第二十章｜更了解你的 Claude Code-p003.png",
+    "label": "20-第二十章｜更了解你的 Claude Code (3)"
+  },
+  {
+    "file": "png/20-第二十章｜更了解你的 Claude Code-p004.png",
+    "label": "20-第二十章｜更了解你的 Claude Code (4)"
+  },
+  {
+    "file": "png/20-第二十章｜更了解你的 Claude Code-p005.png",
+    "label": "20-第二十章｜更了解你的 Claude Code (5)"
+  },
+  {
+    "file": "png/20-第二十章｜更了解你的 Claude Code-p006.png",
+    "label": "20-第二十章｜更了解你的 Claude Code (6)"
+  },
+  {
+    "file": "png/20-第二十章｜更了解你的 Claude Code-p007.png",
+    "label": "20-第二十章｜更了解你的 Claude Code (7)"
+  },
+  {
+    "file": "png/20-第二十章｜更了解你的 Claude Code-p008.png",
+    "label": "20-第二十章｜更了解你的 Claude Code (8)"
+  },
+  {
+    "file": "png/20-第二十章｜更了解你的 Claude Code-p009.png",
+    "label": "20-第二十章｜更了解你的 Claude Code (9)"
+  },
+  {
+    "file": "png/20-第二十章｜更了解你的 Claude Code-p010.png",
+    "label": "20-第二十章｜更了解你的 Claude Code (10)"
+  },
+  {
+    "file": "png/20-第二十章｜更了解你的 Claude Code-p011.png",
+    "label": "20-第二十章｜更了解你的 Claude Code (11)"
+  },
+  {
+    "file": "png/20-第二十章｜更了解你的 Claude Code-p012.png",
+    "label": "20-第二十章｜更了解你的 Claude Code (12)"
+  },
+  {
+    "file": "png/20-第二十章｜更了解你的 Claude Code-p013.png",
+    "label": "20-第二十章｜更了解你的 Claude Code (13)"
+  },
+  {
+    "file": "png/20-第二十章｜更了解你的 Claude Code-p014.png",
+    "label": "20-第二十章｜更了解你的 Claude Code (14)"
+  },
+  {
+    "file": "png/20-第二十章｜更了解你的 Claude Code-p015.png",
+    "label": "20-第二十章｜更了解你的 Claude Code (15)"
+  },
+  {
+    "file": "png/20-第二十章｜更了解你的 Claude Code-p016.png",
+    "label": "20-第二十章｜更了解你的 Claude Code (16)"
+  },
+  {
+    "file": "png/20-第二十章｜更了解你的 Claude Code-p017.png",
+    "label": "20-第二十章｜更了解你的 Claude Code (17)"
+  },
+  {
+    "file": "png/20-第二十章｜更了解你的 Claude Code-p018.png",
+    "label": "20-第二十章｜更了解你的 Claude Code (18)"
+  },
+  {
+    "file": "png/20-第二十章｜更了解你的 Claude Code-p019.png",
+    "label": "20-第二十章｜更了解你的 Claude Code (19)"
+  },
+  {
+    "file": "png/20-第二十章｜更了解你的 Claude Code-p020.png",
+    "label": "20-第二十章｜更了解你的 Claude Code (20)"
+  },
+  {
+    "file": "png/20-第二十章｜更了解你的 Claude Code-p021.png",
+    "label": "20-第二十章｜更了解你的 Claude Code (21)"
+  },
+  {
+    "file": "png/21-第二十一章｜用工業化流程來開發 AI 專案-p001.png",
+    "label": "21-第二十一章｜用工業化流程來開發 AI 專案 (1)"
+  },
+  {
+    "file": "png/21-第二十一章｜用工業化流程來開發 AI 專案-p002.png",
+    "label": "21-第二十一章｜用工業化流程來開發 AI 專案 (2)"
+  },
+  {
+    "file": "png/21-第二十一章｜用工業化流程來開發 AI 專案-p003.png",
+    "label": "21-第二十一章｜用工業化流程來開發 AI 專案 (3)"
+  },
+  {
+    "file": "png/21-第二十一章｜用工業化流程來開發 AI 專案-p004.png",
+    "label": "21-第二十一章｜用工業化流程來開發 AI 專案 (4)"
+  },
+  {
+    "file": "png/21-第二十一章｜用工業化流程來開發 AI 專案-p005.png",
+    "label": "21-第二十一章｜用工業化流程來開發 AI 專案 (5)"
+  },
+  {
+    "file": "png/21-第二十一章｜用工業化流程來開發 AI 專案-p006.png",
+    "label": "21-第二十一章｜用工業化流程來開發 AI 專案 (6)"
+  },
+  {
+    "file": "png/21-第二十一章｜用工業化流程來開發 AI 專案-p007.png",
+    "label": "21-第二十一章｜用工業化流程來開發 AI 專案 (7)"
+  },
+  {
+    "file": "png/21-第二十一章｜用工業化流程來開發 AI 專案-p008.png",
+    "label": "21-第二十一章｜用工業化流程來開發 AI 專案 (8)"
+  },
+  {
+    "file": "png/21-第二十一章｜用工業化流程來開發 AI 專案-p009.png",
+    "label": "21-第二十一章｜用工業化流程來開發 AI 專案 (9)"
+  },
+  {
+    "file": "png/21-第二十一章｜用工業化流程來開發 AI 專案-p010.png",
+    "label": "21-第二十一章｜用工業化流程來開發 AI 專案 (10)"
+  },
+  {
+    "file": "png/21-第二十一章｜用工業化流程來開發 AI 專案-p011.png",
+    "label": "21-第二十一章｜用工業化流程來開發 AI 專案 (11)"
+  },
+  {
+    "file": "png/21-第二十一章｜用工業化流程來開發 AI 專案-p012.png",
+    "label": "21-第二十一章｜用工業化流程來開發 AI 專案 (12)"
+  },
+  {
+    "file": "png/22-第二十二章｜Jupyter Notebook 重構成 .py 再變成 Streamlit 應用-p001.png",
+    "label": "22-第二十二章｜Jupyter Notebook 重構成 .py 再變成 Streamlit 應用 (1)"
+  },
+  {
+    "file": "png/22-第二十二章｜Jupyter Notebook 重構成 .py 再變成 Streamlit 應用-p002.png",
+    "label": "22-第二十二章｜Jupyter Notebook 重構成 .py 再變成 Streamlit 應用 (2)"
+  },
+  {
+    "file": "png/22-第二十二章｜Jupyter Notebook 重構成 .py 再變成 Streamlit 應用-p003.png",
+    "label": "22-第二十二章｜Jupyter Notebook 重構成 .py 再變成 Streamlit 應用 (3)"
+  },
+  {
+    "file": "png/22-第二十二章｜Jupyter Notebook 重構成 .py 再變成 Streamlit 應用-p004.png",
+    "label": "22-第二十二章｜Jupyter Notebook 重構成 .py 再變成 Streamlit 應用 (4)"
+  },
+  {
+    "file": "png/22-第二十二章｜Jupyter Notebook 重構成 .py 再變成 Streamlit 應用-p005.png",
+    "label": "22-第二十二章｜Jupyter Notebook 重構成 .py 再變成 Streamlit 應用 (5)"
+  },
+  {
+    "file": "png/22-第二十二章｜Jupyter Notebook 重構成 .py 再變成 Streamlit 應用-p006.png",
+    "label": "22-第二十二章｜Jupyter Notebook 重構成 .py 再變成 Streamlit 應用 (6)"
+  },
+  {
+    "file": "png/22-第二十二章｜Jupyter Notebook 重構成 .py 再變成 Streamlit 應用-p007.png",
+    "label": "22-第二十二章｜Jupyter Notebook 重構成 .py 再變成 Streamlit 應用 (7)"
+  },
+  {
+    "file": "png/22-第二十二章｜Jupyter Notebook 重構成 .py 再變成 Streamlit 應用-p008.png",
+    "label": "22-第二十二章｜Jupyter Notebook 重構成 .py 再變成 Streamlit 應用 (8)"
+  },
+  {
+    "file": "png/22-第二十二章｜Jupyter Notebook 重構成 .py 再變成 Streamlit 應用-p009.png",
+    "label": "22-第二十二章｜Jupyter Notebook 重構成 .py 再變成 Streamlit 應用 (9)"
+  },
+  {
+    "file": "png/22-第二十二章｜Jupyter Notebook 重構成 .py 再變成 Streamlit 應用-p010.png",
+    "label": "22-第二十二章｜Jupyter Notebook 重構成 .py 再變成 Streamlit 應用 (10)"
+  },
+  {
+    "file": "png/22-第二十二章｜Jupyter Notebook 重構成 .py 再變成 Streamlit 應用-p011.png",
+    "label": "22-第二十二章｜Jupyter Notebook 重構成 .py 再變成 Streamlit 應用 (11)"
+  },
+  {
+    "file": "png/22-第二十二章｜Jupyter Notebook 重構成 .py 再變成 Streamlit 應用-p012.png",
+    "label": "22-第二十二章｜Jupyter Notebook 重構成 .py 再變成 Streamlit 應用 (12)"
+  },
+  {
+    "file": "png/22-第二十二章｜Jupyter Notebook 重構成 .py 再變成 Streamlit 應用-p013.png",
+    "label": "22-第二十二章｜Jupyter Notebook 重構成 .py 再變成 Streamlit 應用 (13)"
+  },
+  {
+    "file": "png/22-第二十二章｜Jupyter Notebook 重構成 .py 再變成 Streamlit 應用-p014.png",
+    "label": "22-第二十二章｜Jupyter Notebook 重構成 .py 再變成 Streamlit 應用 (14)"
+  },
+  {
+    "file": "png/22-第二十二章｜Jupyter Notebook 重構成 .py 再變成 Streamlit 應用-p015.png",
+    "label": "22-第二十二章｜Jupyter Notebook 重構成 .py 再變成 Streamlit 應用 (15)"
+  },
+  {
+    "file": "png/22-第二十二章｜Jupyter Notebook 重構成 .py 再變成 Streamlit 應用-p016.png",
+    "label": "22-第二十二章｜Jupyter Notebook 重構成 .py 再變成 Streamlit 應用 (16)"
+  },
+  {
+    "file": "png/22-第二十二章｜Jupyter Notebook 重構成 .py 再變成 Streamlit 應用-p017.png",
+    "label": "22-第二十二章｜Jupyter Notebook 重構成 .py 再變成 Streamlit 應用 (17)"
+  },
+  {
+    "file": "png/23-第二十三章｜Claude 與 Xcode 的完美整合-p001.png",
+    "label": "23-第二十三章｜Claude 與 Xcode 的完美整合 (1)"
+  },
+  {
+    "file": "png/23-第二十三章｜Claude 與 Xcode 的完美整合-p002.png",
+    "label": "23-第二十三章｜Claude 與 Xcode 的完美整合 (2)"
+  },
+  {
+    "file": "png/23-第二十三章｜Claude 與 Xcode 的完美整合-p003.png",
+    "label": "23-第二十三章｜Claude 與 Xcode 的完美整合 (3)"
+  },
+  {
+    "file": "png/23-第二十三章｜Claude 與 Xcode 的完美整合-p004.png",
+    "label": "23-第二十三章｜Claude 與 Xcode 的完美整合 (4)"
+  },
+  {
+    "file": "png/23-第二十三章｜Claude 與 Xcode 的完美整合-p005.png",
+    "label": "23-第二十三章｜Claude 與 Xcode 的完美整合 (5)"
+  },
+  {
+    "file": "png/23-第二十三章｜Claude 與 Xcode 的完美整合-p006.png",
+    "label": "23-第二十三章｜Claude 與 Xcode 的完美整合 (6)"
+  },
+  {
+    "file": "png/23-第二十三章｜Claude 與 Xcode 的完美整合-p007.png",
+    "label": "23-第二十三章｜Claude 與 Xcode 的完美整合 (7)"
+  },
+  {
+    "file": "png/23-第二十三章｜Claude 與 Xcode 的完美整合-p008.png",
+    "label": "23-第二十三章｜Claude 與 Xcode 的完美整合 (8)"
+  },
+  {
+    "file": "png/23-第二十三章｜Claude 與 Xcode 的完美整合-p009.png",
+    "label": "23-第二十三章｜Claude 與 Xcode 的完美整合 (9)"
+  },
+  {
+    "file": "png/23-第二十三章｜Claude 與 Xcode 的完美整合-p010.png",
+    "label": "23-第二十三章｜Claude 與 Xcode 的完美整合 (10)"
+  },
+  {
+    "file": "png/23-第二十三章｜Claude 與 Xcode 的完美整合-p011.png",
+    "label": "23-第二十三章｜Claude 與 Xcode 的完美整合 (11)"
+  },
+  {
+    "file": "png/23-第二十三章｜Claude 與 Xcode 的完美整合-p012.png",
+    "label": "23-第二十三章｜Claude 與 Xcode 的完美整合 (12)"
+  },
+  {
+    "file": "png/24-第二十四章｜建立純雲端部署的手機產品電商網站-p001.png",
+    "label": "24-第二十四章｜建立純雲端部署的手機產品電商網站 (1)"
+  },
+  {
+    "file": "png/24-第二十四章｜建立純雲端部署的手機產品電商網站-p002.png",
+    "label": "24-第二十四章｜建立純雲端部署的手機產品電商網站 (2)"
+  },
+  {
+    "file": "png/24-第二十四章｜建立純雲端部署的手機產品電商網站-p003.png",
+    "label": "24-第二十四章｜建立純雲端部署的手機產品電商網站 (3)"
+  },
+  {
+    "file": "png/24-第二十四章｜建立純雲端部署的手機產品電商網站-p004.png",
+    "label": "24-第二十四章｜建立純雲端部署的手機產品電商網站 (4)"
+  },
+  {
+    "file": "png/24-第二十四章｜建立純雲端部署的手機產品電商網站-p005.png",
+    "label": "24-第二十四章｜建立純雲端部署的手機產品電商網站 (5)"
+  },
+  {
+    "file": "png/24-第二十四章｜建立純雲端部署的手機產品電商網站-p006.png",
+    "label": "24-第二十四章｜建立純雲端部署的手機產品電商網站 (6)"
+  },
+  {
+    "file": "png/24-第二十四章｜建立純雲端部署的手機產品電商網站-p007.png",
+    "label": "24-第二十四章｜建立純雲端部署的手機產品電商網站 (7)"
+  },
+  {
+    "file": "png/24-第二十四章｜建立純雲端部署的手機產品電商網站-p008.png",
+    "label": "24-第二十四章｜建立純雲端部署的手機產品電商網站 (8)"
+  },
+  {
+    "file": "png/24-第二十四章｜建立純雲端部署的手機產品電商網站-p009.png",
+    "label": "24-第二十四章｜建立純雲端部署的手機產品電商網站 (9)"
+  },
+  {
+    "file": "png/24-第二十四章｜建立純雲端部署的手機產品電商網站-p010.png",
+    "label": "24-第二十四章｜建立純雲端部署的手機產品電商網站 (10)"
+  },
+  {
+    "file": "png/24-第二十四章｜建立純雲端部署的手機產品電商網站-p011.png",
+    "label": "24-第二十四章｜建立純雲端部署的手機產品電商網站 (11)"
+  },
+  {
+    "file": "png/24-第二十四章｜建立純雲端部署的手機產品電商網站-p012.png",
+    "label": "24-第二十四章｜建立純雲端部署的手機產品電商網站 (12)"
+  },
+  {
+    "file": "png/24-第二十四章｜建立純雲端部署的手機產品電商網站-p013.png",
+    "label": "24-第二十四章｜建立純雲端部署的手機產品電商網站 (13)"
+  },
+  {
+    "file": "png/24-第二十四章｜建立純雲端部署的手機產品電商網站-p014.png",
+    "label": "24-第二十四章｜建立純雲端部署的手機產品電商網站 (14)"
+  },
+  {
+    "file": "png/25-第二十五章｜用 Claude Code 加 Unsloth 訓練具推理能力的大語言模型-p001.png",
+    "label": "25-第二十五章｜用 Claude Code 加 Unsloth 訓練具推理能力的大語言模型 (1)"
+  },
+  {
+    "file": "png/25-第二十五章｜用 Claude Code 加 Unsloth 訓練具推理能力的大語言模型-p002.png",
+    "label": "25-第二十五章｜用 Claude Code 加 Unsloth 訓練具推理能力的大語言模型 (2)"
+  },
+  {
+    "file": "png/25-第二十五章｜用 Claude Code 加 Unsloth 訓練具推理能力的大語言模型-p003.png",
+    "label": "25-第二十五章｜用 Claude Code 加 Unsloth 訓練具推理能力的大語言模型 (3)"
+  },
+  {
+    "file": "png/25-第二十五章｜用 Claude Code 加 Unsloth 訓練具推理能力的大語言模型-p004.png",
+    "label": "25-第二十五章｜用 Claude Code 加 Unsloth 訓練具推理能力的大語言模型 (4)"
+  },
+  {
+    "file": "png/25-第二十五章｜用 Claude Code 加 Unsloth 訓練具推理能力的大語言模型-p005.png",
+    "label": "25-第二十五章｜用 Claude Code 加 Unsloth 訓練具推理能力的大語言模型 (5)"
+  },
+  {
+    "file": "png/25-第二十五章｜用 Claude Code 加 Unsloth 訓練具推理能力的大語言模型-p006.png",
+    "label": "25-第二十五章｜用 Claude Code 加 Unsloth 訓練具推理能力的大語言模型 (6)"
+  },
+  {
+    "file": "png/25-第二十五章｜用 Claude Code 加 Unsloth 訓練具推理能力的大語言模型-p007.png",
+    "label": "25-第二十五章｜用 Claude Code 加 Unsloth 訓練具推理能力的大語言模型 (7)"
+  },
+  {
+    "file": "png/25-第二十五章｜用 Claude Code 加 Unsloth 訓練具推理能力的大語言模型-p008.png",
+    "label": "25-第二十五章｜用 Claude Code 加 Unsloth 訓練具推理能力的大語言模型 (8)"
+  },
+  {
+    "file": "png/25-第二十五章｜用 Claude Code 加 Unsloth 訓練具推理能力的大語言模型-p009.png",
+    "label": "25-第二十五章｜用 Claude Code 加 Unsloth 訓練具推理能力的大語言模型 (9)"
+  },
+  {
+    "file": "png/25-第二十五章｜用 Claude Code 加 Unsloth 訓練具推理能力的大語言模型-p010.png",
+    "label": "25-第二十五章｜用 Claude Code 加 Unsloth 訓練具推理能力的大語言模型 (10)"
+  },
+  {
+    "file": "png/25-第二十五章｜用 Claude Code 加 Unsloth 訓練具推理能力的大語言模型-p011.png",
+    "label": "25-第二十五章｜用 Claude Code 加 Unsloth 訓練具推理能力的大語言模型 (11)"
+  },
+  {
+    "file": "png/25-第二十五章｜用 Claude Code 加 Unsloth 訓練具推理能力的大語言模型-p012.png",
+    "label": "25-第二十五章｜用 Claude Code 加 Unsloth 訓練具推理能力的大語言模型 (12)"
+  },
+  {
+    "file": "png/25-第二十五章｜用 Claude Code 加 Unsloth 訓練具推理能力的大語言模型-p013.png",
+    "label": "25-第二十五章｜用 Claude Code 加 Unsloth 訓練具推理能力的大語言模型 (13)"
+  }
+];
+
+let curIdx=0,scale=1,tx=0,ty=0;
+let dragging=false,dragX=0,dragY=0;
+let autoInterval=null;
+
+const viewer=document.getElementById('viewer');
+const img=document.getElementById('img');
+const badge=document.getElementById('badge');
+const counter=document.getElementById('counter');
+const pageInfo=document.getElementById('page-info');
+const btnPrev=document.getElementById('btn-prev');
+const btnNext=document.getElementById('btn-next');
+const thumbsEl=document.getElementById('thumbs');
+const btnPlay=document.getElementById('btn-play');
+const speedSelect=document.getElementById('speed-select');
+
+function applyTransform(){
+  img.style.transform=;
+  badge.textContent=Math.round(scale*100)+'%';
+}
+function fitImage(){
+  const PAD=24;
+  scale=Math.min((viewer.clientWidth-PAD*2)/img.naturalWidth,(viewer.clientHeight-PAD*2)/img.naturalHeight);
+  tx=(viewer.clientWidth-img.naturalWidth*scale)/2;
+  ty=(viewer.clientHeight-img.naturalHeight*scale)/2;
+  applyTransform();
+}
+function loadImage(idx){
+  curIdx=idx;
+  img.onload=()=>fitImage();
+  img.src=IMAGES[idx].file;
+  counter.textContent=(idx+1)+' / '+IMAGES.length;
+  pageInfo.textContent=(idx+1)+' / '+IMAGES.length;
+  btnPrev.disabled=idx===0;
+  btnNext.disabled=idx===IMAGES.length-1;
+  document.querySelectorAll('.thumb').forEach((t,i)=>t.classList.toggle('active',i===idx));
+  const at=thumbsEl.children[idx];
+  if(at) at.scrollIntoView({block:'nearest',inline:'nearest'});
+}
+
+IMAGES.forEach((im,i)=>{
+  const t=document.createElement('img');
+  t.className='thumb'+(i===0?' active':'');
+  t.src=im.file; t.title=im.label;
+  t.onclick=()=>loadImage(i);
+  thumbsEl.appendChild(t);
+});
+loadImage(0);
+
+btnPrev.onclick=()=>{if(curIdx>0) loadImage(curIdx-1);};
+btnNext.onclick=()=>{if(curIdx<IMAGES.length-1) loadImage(curIdx+1);};
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowLeft'){e.preventDefault();if(curIdx>0) loadImage(curIdx-1);}
+  else if(e.key==='ArrowRight'){e.preventDefault();if(curIdx<IMAGES.length-1) loadImage(curIdx+1);}
+  else if(e.key===' '){e.preventDefault();btnPlay.click();}
+});
+
+viewer.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const f=e.deltaY<0?1.13:1/1.13;
+  const ns=Math.min(Math.max(scale*f,0.1),25);
+  const vr=viewer.getBoundingClientRect();
+  const cx=e.clientX-vr.left,cy=e.clientY-vr.top;
+  tx=cx-(cx-tx)*(ns/scale);
+  ty=cy-(cy-ty)*(ns/scale);
+  scale=ns; applyTransform();
+},{passive:false});
+
+viewer.addEventListener('mousedown',e=>{dragging=true;dragX=e.clientX-tx;dragY=e.clientY-ty;viewer.classList.add('dragging');});
+document.addEventListener('mousemove',e=>{if(!dragging)return;tx=e.clientX-dragX;ty=e.clientY-dragY;applyTransform();});
+document.addEventListener('mouseup',()=>{dragging=false;viewer.classList.remove('dragging');});
+viewer.addEventListener('dblclick',()=>{scale=1;tx=0;ty=0;fitImage();});
+
+function autoNext(){
+  if(curIdx<IMAGES.length-1){loadImage(curIdx+1);}
+  else{stopAuto();loadImage(0);}
+}
+function stopAuto(){
+  clearInterval(autoInterval);autoInterval=null;
+  btnPlay.textContent='▶ 自動播放';btnPlay.classList.remove('playing');
+}
+btnPlay.onclick=()=>{
+  if(autoInterval){stopAuto();}
+  else{
+    autoInterval=setInterval(autoNext,parseInt(speedSelect.value));
+    btnPlay.textContent='⏸ 暫停';btnPlay.classList.add('playing');
+  }
+};
+speedSelect.addEventListener('change',()=>{
+  if(autoInterval){clearInterval(autoInterval);autoInterval=setInterval(autoNext,parseInt(speedSelect.value));}
+});
+window.addEventListener('resize',()=>fitImage());
+</script>
+</body>
+</html>
